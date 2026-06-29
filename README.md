@@ -21,6 +21,14 @@ A self-contained manager script that compiles the latest `snes9x-gtk` from sourc
 * **Storage:** ~400 MB free disk space required during compilation (~250 MB is automatically reclaimed post-build).
 * **Network:** Internet connection required for the initial codebase fetch and dependency resolution.
 
+* ## References & Documentation
+* [Source](https://github.com/snes9xgit/snes9x)
+* [Compiling](https://github.com/snes9xgit/snes9x/wiki/Compiling)
+* [License](https://github.com/snes9xgit/snes9x/blob/master/LICENSE)
+
+> **License Note:** Snes9x is freeware for PERSONAL USE only (non-commercial).
+
+
 ## Usage
 
 Do **NOT** run this script as root or via `sudo`. Execute it directly within your user environment:
@@ -29,9 +37,3 @@ Do **NOT** run this script as root or via `sudo`. Execute it directly within you
 chmod +x snes9x-manager.sh
 ./snes9x-manager.sh
 
-## References & Documentation
-* [Source](https://github.com/snes9xgit/snes9x)
-* [Compiling](https://github.com/snes9xgit/snes9x/wiki/Compiling)
-* [License](https://github.com/snes9xgit/snes9x/blob/master/LICENSE)
-
-> **License Note:** Snes9x is freeware for PERSONAL USE only (non-commercial).
