@@ -28,3 +28,10 @@ Do **NOT** run this script as root or via `sudo`. Execute it directly within you
 ```bash
 chmod +x snes9x-manager.sh
 ./snes9x-manager.sh
+
+## References & Documentation
+* [Source](https://github.com/snes9xgit/snes9x)
+* [Compiling](https://github.com/snes9xgit/snes9x/wiki/Compiling)
+* [License](https://github.com/snes9xgit/snes9x/blob/master/LICENSE)
+
+> **License Note:** Snes9x is freeware for PERSONAL USE only (non-commercial).
