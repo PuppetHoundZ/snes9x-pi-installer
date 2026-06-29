@@ -21,7 +21,7 @@ A self-contained manager script that compiles the latest `snes9x-gtk` from sourc
 * **Storage:** ~400 MB free disk space required during compilation (~250 MB is automatically reclaimed post-build).
 * **Network:** Internet connection required for the initial codebase fetch and dependency resolution.
 
-* ## References & Documentation
+## References & Documentation
 * [Source](https://github.com/snes9xgit/snes9x)
 * [Compiling](https://github.com/snes9xgit/snes9x/wiki/Compiling)
 * [License](https://github.com/snes9xgit/snes9x/blob/master/LICENSE)
