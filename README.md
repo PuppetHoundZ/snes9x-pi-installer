@@ -27,6 +27,12 @@ A self-contained manager script that compiles the latest `snes9x-gtk` from sourc
 * [License](https://github.com/snes9xgit/snes9x/blob/master/LICENSE)
 
 > **License Note:** Snes9x is freeware for PERSONAL USE only (non-commercial).
+## Credits & Upstream Sources
+This installer builds [snes9x](https://github.com/snes9xgit/snes9x) from source.
+Snes9x is freeware for personal, non-commercial use only — commercial use
+requires permission from the copyright holders (see the project's LICENSE
+file for full terms). This installer script is independently authored and
+MIT-licensed; it is not affiliated with the Snes9x team.
 
 
 ## Usage
