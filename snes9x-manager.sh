@@ -2,8 +2,8 @@
 # =============================================================================
 # snes9x-manager.sh
 # SNES9X Manager for Raspberry Pi 4
-# Version: 2.2.3
-# Last updated: 2026-06-10
+# Version: 2.3.0
+# Last updated: 2026-07-07
 #
 # Self-contained — generates all required files on Install:
 #   • snes9x-gtk   (compiled from source)  → ~/.local/bin/snes9x-gtk
@@ -12,6 +12,7 @@
 #
 # snes9x — Portable Super Nintendo Entertainment System (TM) emulator
 #   Source:    https://github.com/snes9xgit/snes9x
+#   Releases:  https://github.com/snes9xgit/snes9x/releases
 #   Compiling: https://github.com/snes9xgit/snes9x/wiki/Compiling
 #   License:   Snes9x is freeware for PERSONAL USE only (non-commercial).
 #              https://github.com/snes9xgit/snes9x/blob/master/LICENSE
@@ -25,6 +26,11 @@
 #   • Direct snes9x-gtk desktop shortcut (no Python frontend)
 #   • FRESH-COMPILE GUARANTEE — crash recovery via marker files
 #   • Clean uninstall — never touches ROMs, retains apt dependencies
+#   • v2.3.0: GitHub Releases API version checker (get_latest_snes9x_release),
+#     shown in status and before the Update menu. Tracks what was actually
+#     built (pinned tag or "master (commit)") in a state file, since the
+#     manager can build either — this is separate from SNES9X_TAG, which is
+#     just the pinned default. No auto-update; always asks first.
 #
 # Star Fox 2 / SuperFX2 note:
 #   Pi 4 at 2.2 GHz locks 60 fps host rate on all SNES titles.
@@ -164,6 +170,7 @@ MANAGER_DESKTOP_FILE="$DESKTOP_DIR/snes9x-manager.desktop" # this manager script
 STATE_DIR="$CONFIG_DIR/.snes9x-manager"
 PARTIAL_MARKER="$STATE_DIR/partial-install"
 BUILD_DIR_FILE="$STATE_DIR/build-dir"
+INSTALLED_VERSION_FILE="$STATE_DIR/installed-version"
 
 # ── Source & build config ─────────────────────────────────────────────────────
 SNES9X_REPO="https://github.com/snes9xgit/snes9x.git"
@@ -174,11 +181,60 @@ PI4_CFLAGS="-O3 -mcpu=cortex-a72"
 [[ "$EUID" -eq 0 ]] && error "Do not run this script as root."
 
 # =============================================================================
+# VERSION CHECK HELPERS
+# Ref: https://github.com/snes9xgit/snes9x/releases
+# Queries the GitHub Releases API for the newest tagged release and compares
+# it against what was actually built last (recorded in INSTALLED_VERSION_FILE,
+# not just the hardcoded SNES9X_TAG pinned in this script).
+# =============================================================================
+save_installed_version() {
+    # $1: "1.63" for a tagged build, or "master (abc1234)" for a master build
+    mkdir -p "$STATE_DIR"
+    echo "$1" > "$INSTALLED_VERSION_FILE"
+}
+
+get_installed_version() {
+    if [[ -f "$INSTALLED_VERSION_FILE" ]]; then
+        cat "$INSTALLED_VERSION_FILE"
+    elif [[ -x "$SNES9X_BIN" ]]; then
+        # Binary exists but no marker (e.g. pre-2.3.0 install) — assume pinned tag
+        echo "$SNES9X_TAG (assumed)"
+    else
+        echo "not installed"
+    fi
+}
+
+get_latest_snes9x_release() {
+    local tag
+    tag=$(curl -fsSL --connect-timeout 8 \
+        "https://api.github.com/repos/snes9xgit/snes9x/releases/latest" \
+        2>/dev/null \
+        | grep -oP '"tag_name":\s*"\K[^"]+' | head -1)
+    # Empty result covers both curl failure and a malformed/rate-limited
+    # response body (e.g. GitHub API error JSON with no tag_name field).
+    [[ -n "$tag" ]] && echo "$tag" || echo "unknown"
+}
+
+# =============================================================================
 # STATUS DISPLAY
 # =============================================================================
 snes9x_status() {
+    local installed_ver latest_ver
+    installed_ver=$(get_installed_version)
+
     if [[ -x "$SNES9X_BIN" ]]; then
-        print_ok "snes9x-gtk installed: $SNES9X_BIN  (tag $SNES9X_TAG)"
+        print_ok "snes9x-gtk installed: $SNES9X_BIN  (built: $installed_ver)"
+        latest_ver=$(get_latest_snes9x_release)
+        if [[ "$latest_ver" == "unknown" ]]; then
+            print_info "Latest release on GitHub: (offline — could not reach api.github.com)"
+        elif [[ "$installed_ver" == "$latest_ver" || "$installed_ver" == master* ]]; then
+            print_info "Latest tagged release  : $latest_ver"
+            [[ "$installed_ver" == master* ]] && print_info "(You're on a master build — tag comparison doesn't apply)"
+        elif [[ "$installed_ver" == "$latest_ver (assumed)" ]]; then
+            print_info "Latest tagged release  : $latest_ver  (matches pinned tag)"
+        else
+            print_info "${YELLOW}⚡ Update available — latest tagged release: $latest_ver${NC}"
+        fi
     else
         print_info "snes9x-gtk: not installed"
     fi
@@ -520,6 +576,7 @@ do_install() {
     fi
     [[ -x "$SNES9X_BIN" ]] || error "Build completed but $SNES9X_BIN not found."
     info "snes9x-gtk installed: $SNES9X_BIN"
+    save_installed_version "$SNES9X_TAG"
 
     step "Writing pre-tuned snes9x.conf"
     write_snes9x_conf
@@ -554,6 +611,21 @@ do_update() {
         warn "snes9x is not installed. Run Install first."
         return 0
     fi
+
+    local installed_ver latest_ver
+    installed_ver=$(get_installed_version)
+    info "Currently built : $installed_ver"
+    info "Checking GitHub for the latest tagged release…"
+    latest_ver=$(get_latest_snes9x_release)
+    if [[ "$latest_ver" == "unknown" ]]; then
+        warn "Could not reach GitHub — check your internet connection."
+    elif [[ "$latest_ver" != "$SNES9X_TAG" ]]; then
+        warn "This script is pinned to $SNES9X_TAG, but GitHub's latest tagged release is $latest_ver."
+        warn "Pick option 2 below to build that newer release, or ask for the pinned tag to be bumped."
+    else
+        print_ok "Pinned tag ($SNES9X_TAG) matches GitHub's latest tagged release."
+    fi
+
     echo ""
     echo "  1) Rebuild pinned stable tag ($SNES9X_TAG)  — recommended"
     echo "  2) Build latest master (newest fixes, may change daily)"
@@ -582,6 +654,9 @@ do_update() {
     done
     cd snes9x/gtk || error "snes9x/gtk directory missing after clone"
 
+    local BUILT_COMMIT
+    BUILT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
     cmake -B build \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="$HOME/.local" \
@@ -599,6 +674,12 @@ do_update() {
     fi
     [[ -x "$SNES9X_BIN" ]] || error "Build completed but binary not found."
 
+    if [[ "${UPD:-1}" == "2" ]]; then
+        save_installed_version "master ($BUILT_COMMIT)"
+    else
+        save_installed_version "$SNES9X_TAG"
+    fi
+
     step "Reinstalling desktop shortcut"
     write_desktop_shortcuts
 
@@ -608,6 +689,7 @@ do_update() {
 
     echo ""
     print_ok "Update complete. Your snes9x.conf, saves, and ROMs are unchanged."
+    print_info "Built: $(get_installed_version)"
     echo ""
 }
 
